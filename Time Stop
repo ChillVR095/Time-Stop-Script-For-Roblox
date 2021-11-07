@@ -1,0 +1,685 @@
+--- [[ Shadow Dio's Time Stop ]] ---
+-- by ChillVR
+
+local me = game.Players.LocalPlayer
+local mouse = me:GetMouse()
+local char = me.Character
+local hum = char:FindFirstChild('Humanoid')
+local hd = char:FindFirstChild('Head')
+local ts = char:FindFirstChild('Torso') or char:FindFirstChild('UpperTorso')
+local ra = char:FindFirstChild('Right Arm') or char:FindFirstChild('RightUpperArm')
+local la = char:FindFirstChild('Left Arm') or char:FindFirstChild('LeftUpperArm')
+local rl = char:FindFirstChild('Right Leg') or char:FindFirstChild('RightUpperLeg')
+local ll = char:FindFirstChild('Left Leg') or char:FindFirstChild('LeftUpperLeg')
+local root = char:FindFirstChild('HumanoidRootPart')
+local rj = root:FindFirstChild('RootJoint')
+local rs = ts:FindFirstChild('Right Shoulder')
+local ls = ts:FindFirstChild('Left Shoulder')
+local rh = ts:FindFirstChild('Right Hip')
+local lh = ts:FindFirstChild('Left Hip')
+local nk = ts:FindFirstChild('Neck')
+local anim = char:FindFirstChild('Animate')
+local base = workspace:FindFirstChild('Baseplate') or workspace:FindFirstChild('Base')
+local cantimestop = true
+local cooldown = false
+local cc = workspace.CurrentCamera
+local cos = math.cos
+local sin = math.sin
+local rad = math.rad
+local rand = math.random
+local cfn = CFrame.new
+local cfa = CFrame.Angles
+local v3 = Vector3.new
+local str = string
+local unfreeze = {}
+local health = {}
+local connect = {}
+local sine = 0
+local effects = nil
+hum.WalkSpeed = 23
+if char:FindFirstChild('Effects') then
+	effects = char:FindFirstChild('Effects')
+else
+	effects = Instance.new('Folder', char)
+	effects.Name = 'Effects'
+end
+
+ArtificialHB = Instance.new('BindableEvent', script)
+ArtificialHB.Name = 'Heartbeat'
+script:WaitForChild('Heartbeat')
+
+frame = 1 / 60
+tf = 0
+allowframeloss = false
+tossremainder = false
+lastframe = tick()
+script.Heartbeat:Fire()
+
+game:GetService('RunService').Heartbeat:connect(function(s, p)
+	tf = tf + s
+	if tf >= frame then
+		if allowframeloss then
+			script.Heartbeat:Fire()
+			lastframe = tick()
+		else
+			for i = 1, math.floor(tf / frame) do
+				script.Heartbeat:Fire()
+			end
+			lastframe = tick()
+		end
+		if tossremainder then
+			tf = 0
+		else
+			tf = tf - frame * math.floor(tf / frame)
+		end
+	end
+end)
+
+function swait(t)
+	if t == 0 or t == nil then
+		script.Heartbeat.Event:Wait()
+	else
+		for i = 0, t do
+			script.Heartbeat.Event:Wait()
+		end
+	end
+end
+
+function sound(id, parent, vol, pitch, timepos)
+	local s = Instance.new('Sound')
+	s.Parent = parent
+	s.SoundId = id
+	s.Volume = vol
+	s.PlaybackSpeed = pitch
+	s.TimePosition = timepos
+	s:Play()
+	game.Debris:AddItem(s, s.PlaybackSpeed + 5)
+end
+
+function camshake(duration, intensity)
+	coroutine.wrap(function()
+		for i = 1, duration do
+			hum.CameraOffset = hum.CameraOffset:lerp(v3(rand(-1, 1), rand(-1, 1), rand(-1, 1)), 0.1 * intensity)
+			swait()
+		end
+		hum.CameraOffset = v3(0, 0, 0)
+	end)()
+end
+
+function findascendant(obj, class)
+	local par = obj
+	local ret = nil
+	pcall(function()
+		repeat 
+			par = par.Parent
+			if par:IsA(class) then
+				ret = par
+				break
+			end
+		until par == nil
+	end)
+	return ret
+end
+
+local TimeStopSounds = {
+	
+	TimeStop = 'rbxassetid://5782635691';
+	TimeResume = 'rbxassetid://6859642317';
+	
+}
+
+function timestop()
+	cantimestop = false
+	coroutine.wrap(function()
+	local effect1 = Instance.new('Part', effects)
+	effect1.Shape = 'Ball'
+	effect1.Material = 'ForceField'
+	effect1.Anchored = true
+	effect1.CanCollide = false
+	effect1.Size = v3(0, 0, 0)
+	effect1.Transparency = 0
+	sound(TimeStopSounds.TimeStop, ts, 5, 1, 0)
+	for i,v in pairs(workspace:GetDescendants()) do
+		if v:IsA('BasePart') then
+			if not v.Anchored and not findascendant(v, 'Tool') and not findascendant(v, 'HopperBin') then
+				if not v:IsDescendantOf(char) then
+					v.Anchored = true
+					table.insert(unfreeze, v)
+				end
+			end
+		end
+		if v:IsA('Sound') then
+			if not v:IsDescendantOf(char) then
+				if v.IsPlaying then
+					v:Pause()
+					table.insert(unfreeze, v)
+				end
+			end
+		end
+		if v:IsA('Humanoid') then
+			local last = v.Health
+			local always = last
+			local e = v.HealthChanged:connect(function(hp)
+				if last - hp > 0 then
+					table.insert(health, {humanoid = v, change = last - hp})
+				end
+				last = hp
+				v.Health = always
+			end)
+			table.insert(connect, e)
+		end
+		if v:IsA('BodyVelocity') then
+			local lastforce = v.MaxForce
+			v.MaxForce = v3(0, 0, 0)
+			table.insert(unfreeze, {force = v, change = lastforce})
+		end
+		if v:IsA('BodyPosition') then
+			local lastposition = v.MaxForce
+			local lastD = v.D
+			local lastP = v.P
+			v.MaxForce = v3(0, 0, 0)
+			v.D = 0
+			v.P = 0
+			table.insert(unfreeze, {position = v, change = lastposition, dchange = lastD, pchange = lastP})
+		end
+		if v:IsA('BodyForce') then
+			local lastforce2 = v.Force
+			v.Force = v3(0, 0, 0)
+			table.insert(unfreeze, {force2 = v, fchange = lastforce2})
+		end
+	end
+	ee = workspace.DescendantAdded:Connect(function(v)
+		if v:IsA('BasePart') then
+			if not v.Anchored and not findascendant(v, 'Tool') and not findascendant(v, 'HopperBin') then
+				if not v:IsDescendantOf(char) then
+					v.Anchored = true
+					table.insert(unfreeze, v)
+				end
+			end
+		end
+		if v:IsA('Sound') then
+			if not v:IsDescendantOf(char) then
+				if v.IsPlaying then
+					v:Pause()
+					table.insert(unfreeze, v)
+				end
+			end
+		end
+		if v:IsA('Humanoid') then
+			local last = v.Health
+			local always = last
+			local e = v.HealthChanged:connect(function(hp)
+				if last - hp > 0 then
+					table.insert(health, {humanoid = v, change = last - hp})
+				end
+				last = hp
+				v.Health = always
+			end)
+			table.insert(connect, e)
+		end
+	end)
+	cce = Instance.new('ColorCorrectionEffect', game.Lighting)
+	coroutine.wrap(function()
+		for i = 1, 10 do
+			camshake(70, 2)
+			cce.Saturation = cce.Saturation - 0.1
+			cce.Contrast = cce.Contrast + 0.1
+			swait(5)
+		end
+	end)()
+	coroutine.wrap(function()
+	for i = 1, 1000 do
+		effect1.CFrame = ts.CFrame
+		effect1.Size = effect1.Size:lerp(v3(50, 50, 50), 0.015)
+		effect1.Transparency = effect1.Transparency + 0.010
+		if effect1.Transparency >= 1 then
+			effect1:Destroy()
+		end
+		swait()
+	end
+	end)()
+	wait(0.5)
+	local effect2 = Instance.new('Part', effects)
+	local effect3 = Instance.new('Part', effects)
+	effect3.Shape = 'Ball'
+	effect3.Material = 'ForceField'
+	effect3.Anchored = true
+	effect3.CanCollide = false
+	effect3.Size = v3(0, 0, 0)
+	effect3.Transparency = 0
+	effect2.Shape = 'Ball'
+	effect2.Material = 'ForceField'
+	effect2.Anchored = true
+	effect2.CanCollide = false
+	effect2.Size = v3(40, 40, 40)
+	effect2.Transparency = 1
+	coroutine.wrap(function()
+		for i = 1, 15 do
+			effect2.Transparency = effect2.Transparency - 0.11
+			swait()
+		end
+	end)()
+	coroutine.wrap(function()
+		for i = 1, 1000 do
+			effect3.CFrame = ts.CFrame
+			effect3.Size = effect3.Size:lerp(v3(50, 50, 50), 0.015)
+			effect3.Transparency = effect3.Transparency + 0.010
+			if effect3.Transparency >= 1 then
+				effect3:Destroy()
+			end
+			swait()
+		end
+	end)()
+	for i = 1, 1000 do
+		effect2.CFrame = ts.CFrame
+		effect2.Size = effect2.Size:lerp(v3(0, 0, 0), 0.015)
+		effect2.Transparency = effect2.Transparency + 0.015
+		if effect2.Transparency >= 1 then
+			effect2:Destroy()
+		end
+		swait()
+	end
+	end)()
+	wait(1.5) -- cooldown
+	cooldown = true
+end
+
+function timeresume()
+	coroutine.wrap(function()
+	sound(TimeStopSounds.TimeResume, ts, 5, 1, 0.15)
+	coroutine.wrap(function()
+		for i = 1, 10 do
+			camshake(20, 0.3)
+			cce.Saturation = cce.Saturation + 0.1
+			cce.Contrast = cce.Contrast - 0.1
+			swait(5)
+		end
+		cce:Destroy()
+	end)()
+	coroutine.wrap(function()
+		wait(1.5)
+	for i,v in pairs(unfreeze) do
+		pcall(function()
+			v.Anchored = false
+		end)
+		pcall(function()
+			v:Resume()
+		end)
+	end
+	for i,v in pairs(connect) do
+		pcall(function()
+			v:Disconnect()
+		end)
+	end
+	for i,v in pairs(health) do
+		pcall(function()
+			local humanoid = v.humanoid
+			humanoid.Health = humanoid.Health - v.change
+			if humanoid.Parent:FindFirstChild('Health') then
+				pcall(function()
+					humanoid.Parent.Health.Disabled = false
+				end)
+			end
+		end)
+	end
+	pcall(function()
+		ee:Disconnect()
+	end)
+	health = {}
+	unfreeze = {}
+	end)()
+	cantimestop = true
+	end)()
+	wait(1.5) -- cooldown
+	cooldown = false
+end
+
+mouse.KeyDown:connect(function(key)
+	if str.lower(key) == 'r' and cantimestop and cooldown == false then
+		timestop()
+	elseif str.lower(key) == 'r' and cantimestop == false and cooldown then
+		timeresume()
+	end
+end)--- [[ Shadow Dio's Time Stop ]] ---
+-- by ChillVR
+
+local me = game.Players.LocalPlayer
+local mouse = me:GetMouse()
+local char = me.Character
+local hum = char:FindFirstChild('Humanoid')
+local hd = char:FindFirstChild('Head')
+local ts = char:FindFirstChild('Torso') or char:FindFirstChild('UpperTorso')
+local ra = char:FindFirstChild('Right Arm') or char:FindFirstChild('RightUpperArm')
+local la = char:FindFirstChild('Left Arm') or char:FindFirstChild('LeftUpperArm')
+local rl = char:FindFirstChild('Right Leg') or char:FindFirstChild('RightUpperLeg')
+local ll = char:FindFirstChild('Left Leg') or char:FindFirstChild('LeftUpperLeg')
+local root = char:FindFirstChild('HumanoidRootPart')
+local rj = root:FindFirstChild('RootJoint')
+local rs = ts:FindFirstChild('Right Shoulder')
+local ls = ts:FindFirstChild('Left Shoulder')
+local rh = ts:FindFirstChild('Right Hip')
+local lh = ts:FindFirstChild('Left Hip')
+local nk = ts:FindFirstChild('Neck')
+local anim = char:FindFirstChild('Animate')
+local base = workspace:FindFirstChild('Baseplate') or workspace:FindFirstChild('Base')
+local cantimestop = true
+local cooldown = false
+local cc = workspace.CurrentCamera
+local cos = math.cos
+local sin = math.sin
+local rad = math.rad
+local rand = math.random
+local cfn = CFrame.new
+local cfa = CFrame.Angles
+local v3 = Vector3.new
+local str = string
+local unfreeze = {}
+local health = {}
+local connect = {}
+local sine = 0
+local effects = nil
+hum.WalkSpeed = 23
+if char:FindFirstChild('Effects') then
+	effects = char:FindFirstChild('Effects')
+else
+	effects = Instance.new('Folder', char)
+	effects.Name = 'Effects'
+end
+
+ArtificialHB = Instance.new('BindableEvent', script)
+ArtificialHB.Name = 'Heartbeat'
+script:WaitForChild('Heartbeat')
+
+frame = 1 / 60
+tf = 0
+allowframeloss = false
+tossremainder = false
+lastframe = tick()
+script.Heartbeat:Fire()
+
+game:GetService('RunService').Heartbeat:connect(function(s, p)
+	tf = tf + s
+	if tf >= frame then
+		if allowframeloss then
+			script.Heartbeat:Fire()
+			lastframe = tick()
+		else
+			for i = 1, math.floor(tf / frame) do
+				script.Heartbeat:Fire()
+			end
+			lastframe = tick()
+		end
+		if tossremainder then
+			tf = 0
+		else
+			tf = tf - frame * math.floor(tf / frame)
+		end
+	end
+end)
+
+function swait(t)
+	if t == 0 or t == nil then
+		script.Heartbeat.Event:Wait()
+	else
+		for i = 0, t do
+			script.Heartbeat.Event:Wait()
+		end
+	end
+end
+
+function sound(id, parent, vol, pitch, timepos)
+	local s = Instance.new('Sound')
+	s.Parent = parent
+	s.SoundId = id
+	s.Volume = vol
+	s.PlaybackSpeed = pitch
+	s.TimePosition = timepos
+	s:Play()
+	game.Debris:AddItem(s, s.PlaybackSpeed + 5)
+end
+
+function camshake(duration, intensity)
+	coroutine.wrap(function()
+		for i = 1, duration do
+			hum.CameraOffset = hum.CameraOffset:lerp(v3(rand(-1, 1), rand(-1, 1), rand(-1, 1)), 0.1 * intensity)
+			swait()
+		end
+		hum.CameraOffset = v3(0, 0, 0)
+	end)()
+end
+
+function findascendant(obj, class)
+	local par = obj
+	local ret = nil
+	pcall(function()
+		repeat 
+			par = par.Parent
+			if par:IsA(class) then
+				ret = par
+				break
+			end
+		until par == nil
+	end)
+	return ret
+end
+
+local TimeStopSounds = {
+	
+	TimeStop = 'rbxassetid://5782635691';
+	TimeResume = 'rbxassetid://6859642317';
+	
+}
+
+function timestop()
+	cantimestop = false
+	coroutine.wrap(function()
+	local effect1 = Instance.new('Part', effects)
+	effect1.Shape = 'Ball'
+	effect1.Material = 'ForceField'
+	effect1.Anchored = true
+	effect1.CanCollide = false
+	effect1.Size = v3(0, 0, 0)
+	effect1.Transparency = 0
+	sound(TimeStopSounds.TimeStop, ts, 5, 1, 0)
+	for i,v in pairs(workspace:GetDescendants()) do
+		if v:IsA('BasePart') then
+			if not v.Anchored and not findascendant(v, 'Tool') and not findascendant(v, 'HopperBin') then
+				if not v:IsDescendantOf(char) then
+					v.Anchored = true
+					table.insert(unfreeze, v)
+				end
+			end
+		end
+		if v:IsA('Sound') then
+			if not v:IsDescendantOf(char) then
+				if v.IsPlaying then
+					v:Pause()
+					table.insert(unfreeze, v)
+				end
+			end
+		end
+		if v:IsA('Humanoid') then
+			local last = v.Health
+			local always = last
+			local e = v.HealthChanged:connect(function(hp)
+				if last - hp > 0 then
+					table.insert(health, {humanoid = v, change = last - hp})
+				end
+				last = hp
+				v.Health = always
+			end)
+			table.insert(connect, e)
+		end
+		if v:IsA('BodyVelocity') then
+			local lastforce = v.MaxForce
+			v.MaxForce = v3(0, 0, 0)
+			table.insert(unfreeze, {force = v, change = lastforce})
+		end
+		if v:IsA('BodyPosition') then
+			local lastposition = v.MaxForce
+			local lastD = v.D
+			local lastP = v.P
+			v.MaxForce = v3(0, 0, 0)
+			v.D = 0
+			v.P = 0
+			table.insert(unfreeze, {position = v, change = lastposition, dchange = lastD, pchange = lastP})
+		end
+		if v:IsA('BodyForce') then
+			local lastforce2 = v.Force
+			v.Force = v3(0, 0, 0)
+			table.insert(unfreeze, {force2 = v, fchange = lastforce2})
+		end
+	end
+	ee = workspace.DescendantAdded:Connect(function(v)
+		if v:IsA('BasePart') then
+			if not v.Anchored and not findascendant(v, 'Tool') and not findascendant(v, 'HopperBin') then
+				if not v:IsDescendantOf(char) then
+					v.Anchored = true
+					table.insert(unfreeze, v)
+				end
+			end
+		end
+		if v:IsA('Sound') then
+			if not v:IsDescendantOf(char) then
+				if v.IsPlaying then
+					v:Pause()
+					table.insert(unfreeze, v)
+				end
+			end
+		end
+		if v:IsA('Humanoid') then
+			local last = v.Health
+			local always = last
+			local e = v.HealthChanged:connect(function(hp)
+				if last - hp > 0 then
+					table.insert(health, {humanoid = v, change = last - hp})
+				end
+				last = hp
+				v.Health = always
+			end)
+			table.insert(connect, e)
+		end
+	end)
+	cce = Instance.new('ColorCorrectionEffect', game.Lighting)
+	coroutine.wrap(function()
+		for i = 1, 10 do
+			camshake(70, 2)
+			cce.Saturation = cce.Saturation - 0.1
+			cce.Contrast = cce.Contrast + 0.1
+			swait(5)
+		end
+	end)()
+	coroutine.wrap(function()
+	for i = 1, 1000 do
+		effect1.CFrame = ts.CFrame
+		effect1.Size = effect1.Size:lerp(v3(50, 50, 50), 0.015)
+		effect1.Transparency = effect1.Transparency + 0.010
+		if effect1.Transparency >= 1 then
+			effect1:Destroy()
+		end
+		swait()
+	end
+	end)()
+	wait(0.5)
+	local effect2 = Instance.new('Part', effects)
+	local effect3 = Instance.new('Part', effects)
+	effect3.Shape = 'Ball'
+	effect3.Material = 'ForceField'
+	effect3.Anchored = true
+	effect3.CanCollide = false
+	effect3.Size = v3(0, 0, 0)
+	effect3.Transparency = 0
+	effect2.Shape = 'Ball'
+	effect2.Material = 'ForceField'
+	effect2.Anchored = true
+	effect2.CanCollide = false
+	effect2.Size = v3(40, 40, 40)
+	effect2.Transparency = 1
+	coroutine.wrap(function()
+		for i = 1, 15 do
+			effect2.Transparency = effect2.Transparency - 0.11
+			swait()
+		end
+	end)()
+	coroutine.wrap(function()
+		for i = 1, 1000 do
+			effect3.CFrame = ts.CFrame
+			effect3.Size = effect3.Size:lerp(v3(50, 50, 50), 0.015)
+			effect3.Transparency = effect3.Transparency + 0.010
+			if effect3.Transparency >= 1 then
+				effect3:Destroy()
+			end
+			swait()
+		end
+	end)()
+	for i = 1, 1000 do
+		effect2.CFrame = ts.CFrame
+		effect2.Size = effect2.Size:lerp(v3(0, 0, 0), 0.015)
+		effect2.Transparency = effect2.Transparency + 0.015
+		if effect2.Transparency >= 1 then
+			effect2:Destroy()
+		end
+		swait()
+	end
+	end)()
+	wait(1.5) -- cooldown
+	cooldown = true
+end
+
+function timeresume()
+	coroutine.wrap(function()
+	sound(TimeStopSounds.TimeResume, ts, 5, 1, 0.15)
+	coroutine.wrap(function()
+		for i = 1, 10 do
+			camshake(20, 0.3)
+			cce.Saturation = cce.Saturation + 0.1
+			cce.Contrast = cce.Contrast - 0.1
+			swait(5)
+		end
+		cce:Destroy()
+	end)()
+	coroutine.wrap(function()
+		wait(1.5)
+	for i,v in pairs(unfreeze) do
+		pcall(function()
+			v.Anchored = false
+		end)
+		pcall(function()
+			v:Resume()
+		end)
+	end
+	for i,v in pairs(connect) do
+		pcall(function()
+			v:Disconnect()
+		end)
+	end
+	for i,v in pairs(health) do
+		pcall(function()
+			local humanoid = v.humanoid
+			humanoid.Health = humanoid.Health - v.change
+			if humanoid.Parent:FindFirstChild('Health') then
+				pcall(function()
+					humanoid.Parent.Health.Disabled = false
+				end)
+			end
+		end)
+	end
+	pcall(function()
+		ee:Disconnect()
+	end)
+	health = {}
+	unfreeze = {}
+	end)()
+	cantimestop = true
+	end)()
+	wait(1.5) -- cooldown
+	cooldown = false
+end
+
+mouse.KeyDown:connect(function(key)
+	if str.lower(key) == 'r' and cantimestop and cooldown == false then
+		timestop()
+	elseif str.lower(key) == 'r' and cantimestop == false and cooldown then
+		timeresume()
+	end
+end)
